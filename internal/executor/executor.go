@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"os/exec"
+	"runtime"
 	"time"
 )
 
@@ -17,6 +18,7 @@ import (
 type ExecutionRequest struct {
 	ActionName         string
 	Arguments          map[string]string
+	Tags               []string
 	action             *config.Action
 	Cfg                *config.Config
 	AuthenticatedUser  *acl.AuthenticatedUser
@@ -33,6 +35,7 @@ type InternalLogEntry struct {
 	Stderr   string
 	TimedOut bool
 	ExitCode int32
+	Tags     []string
 
 	/*
 		The following two properties are obviously on Action normally, but it's useful
@@ -160,6 +163,14 @@ func stepLogFinish(req *ExecutionRequest) bool {
 	return true
 }
 
+func wrapCommandInShell(ctx context.Context, finalParsedCommand string) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.CommandContext(ctx, "cmd", "/C", finalParsedCommand)
+	}
+
+	return exec.CommandContext(ctx, "sh", "-c", finalParsedCommand)
+}
+
 func stepExec(req *ExecutionRequest) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.action.Timeout)*time.Second)
 	defer cancel()
@@ -167,7 +178,7 @@ func stepExec(req *ExecutionRequest) bool {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", req.finalParsedCommand)
+	cmd := wrapCommandInShell(ctx, req.finalParsedCommand)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
@@ -184,6 +195,8 @@ func stepExec(req *ExecutionRequest) bool {
 	if ctx.Err() == context.DeadlineExceeded {
 		req.logEntry.TimedOut = true
 	}
+
+	req.logEntry.Tags = req.Tags
 
 	return true
 }

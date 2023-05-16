@@ -3,14 +3,16 @@ package config
 // Action represents the core functionality of OliveTin - commands that show up
 // as buttons in the UI.
 type Action struct {
-	ID        string
-	Title     string
-	Icon      string
-	Shell     string
-	CSS       map[string]string `mapstructure:"omitempty"`
-	Timeout   int
-	Acls      []string
-	Arguments []ActionArgument
+	ID            string
+	Title         string
+	Icon          string
+	Shell         string
+	CSS           map[string]string `mapstructure:"omitempty"`
+	Timeout       int
+	Acls          []string
+	ExecOnStartup bool
+	ExecOnCron    []string
+	Arguments     []ActionArgument
 }
 
 // ActionArgument objects appear on Actions.
@@ -74,8 +76,11 @@ type Config struct {
 	AuthJwtSecret                   string
 	AuthJwtClaimUsername            string
 	AuthJwtClaimUserGroup           string
+	AuthHttpHeaderUsername          string
+	AuthHttpHeaderUserGroup         string
 	DefaultPermissions              PermissionsList
 	AccessControlLists              []AccessControlList
+	WebUIDir                        string
 }
 
 // DefaultConfig gets a new Config structure with sensible default values.
@@ -97,6 +102,7 @@ func DefaultConfig() *Config {
 	config.DefaultPermissions.View = true
 	config.AuthJwtClaimUsername = "name"
 	config.AuthJwtClaimUserGroup = "group"
+	config.WebUIDir = "./webui"
 
 	return &config
 }
